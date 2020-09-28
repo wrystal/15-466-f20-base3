@@ -70,9 +70,9 @@ Load< std::map<CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> 
     return map_p;
 });
 
-//Load< Sound::Sample > background_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
-//	return new Sound::Sample(data_path("background.opus"));
-//});
+Load< Sound::Sample > background_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("bgm.opus"));
+});
 
 PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//get pointers to leg for convenience:
@@ -96,7 +96,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 //	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
-//	Sound::loop(*background_music_sample, 0.1f, -1.0f);
+	Sound::loop(*background_music_sample, 0.1f, 0.0f);
 	road_tiles.attachToDrawable();
 	player.attachToDrawable();
 }
@@ -360,10 +360,10 @@ void PlayMode::RoadTiles::update(float elapsed) {
 }
 
 PlayMode::Player::Player(Scene *s) : scene_{s} {
-	transform_.position = {0, -5, 0.1};
+	transform_.position = {0.0f, -5.0f, 0.1f};
 	transform_.rotation = glm::angleAxis<float>(
-		glm::radians(180.0),
-		glm::vec3(0, 0, 1)
+		glm::radians((float)180.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f)
 	);
 
 	mesh_ = &hexapod_meshes->lookup("TruckFlat");
@@ -448,9 +448,9 @@ void PlayMode::OncomingCars::generate_new_car() {
 	cars_.emplace_back();
 	Car &c = cars_.back();
 	c.lane_ = Random::get(-1, 1);
-	c.t.position.x = c.lane_*LANE_WIDTH;
-	c.t.position.y = 150;
-	c.t.position.z = 0.1;
+	c.t.position.x = (float) c.lane_*LANE_WIDTH;
+	c.t.position.y = 150.0f;
+	c.t.position.z = 0.1f;
 
 	scene_->drawables.emplace_back(&c.t);
 	auto back_iterator = std::prev(scene_->drawables.end());
