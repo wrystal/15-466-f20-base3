@@ -29,7 +29,7 @@ $(DIST)/hexapod.pnct : hexapod.blend $(EXPORT_MESHES)
 	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Main '$@'
 
 $(DIST)/cars.scene : cars.blend $(EXPORT_SCENE)
-	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Scene '$@'
+	$(BLENDER) --background --python $(EXPORT_SCENE) -- '$<':Collection '$@'
 
 $(DIST)/cars.pnct : cars.blend $(EXPORT_MESHES)
-	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Scene '$@'
+	$(BLENDER) --background --python $(EXPORT_MESHES) -- '$<':Collection '$@'
