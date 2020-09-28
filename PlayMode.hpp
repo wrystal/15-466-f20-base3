@@ -64,7 +64,7 @@ struct PlayMode : Mode {
 		};
 		float next_car_interval_ = 1.0;
 		void generate_new_car();
-		void destroy_obsolete_cars();
+		void detach_obsolete_car(Car &c);
 		std::list<Car> cars_;
 		Scene *scene_ = nullptr;
 		Player *player_ = nullptr;

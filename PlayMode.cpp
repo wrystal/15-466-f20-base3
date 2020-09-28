@@ -164,7 +164,7 @@ void PlayMode::update(float elapsed) {
 //	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
 	road_tiles.update(elapsed);
 	player.update(elapsed);
-
+	oncoming_cars.update(elapsed);
 	{
 		if (left.pressed && left.downs) {
 			player.goLeft();
@@ -347,6 +347,21 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 		generate_new_car();
 		next_car_interval_ = Random::get(1.0f, 3.0f);
 	}
+	constexpr float ONCOMING_CAR_SPEED = 20.0;
+	for (auto &car : cars_) {
+		car.t.position.y -= elapsed*ONCOMING_CAR_SPEED;
+	}
+
+	// remove unused cars
+	for (auto it = cars_.begin(); it != cars_.end();) {
+		if (it->t.position.y < -10) {
+			detach_obsolete_car(*it);
+			it = cars_.erase(it);
+			continue;
+		} else {
+			it++;
+		}
+	}
 
 	return false;
 }
@@ -366,4 +381,9 @@ void PlayMode::OncomingCars::generate_new_car() {
 	const Mesh *mesh_ = &hexapod_meshes->lookup("Police");//TODO(xiaoqiao)
 	d.pipeline.start = mesh_->start;
 	d.pipeline.count = mesh_->count;
+}
+
+void PlayMode::OncomingCars::detach_obsolete_car(Car &c) {
+	scene_->drawables.erase(c.it.value());
+	c.it = std::nullopt;
 }
