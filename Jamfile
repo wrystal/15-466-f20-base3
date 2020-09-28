@@ -12,6 +12,7 @@ if $(OS) = NT { #Windows
 		/I"$(NEST_LIBS)/opusfile/include"
 		/I"$(NEST_LIBS)/libopus/include"
 		/I"$(NEST_LIBS)/libogg/include"
+		/I"third_party/include"
 		#disable a few warnings:
 		/wd4146 #-1U is still unsigned
 		/wd4297 #unforunately SDLmain is nothrow
@@ -44,6 +45,7 @@ if $(OS) = NT { #Windows
 		-I$(NEST_LIBS)/opusfile/include                                             #opusfile
 		-I$(NEST_LIBS)/libopus/include                                              #libopus
 		-I$(NEST_LIBS)/libogg/include                                               #libogg
+		-Ithird_party/include
 		;
 	LINK = clang++ ;
 	LINKFLAGS = -std=c++17 -g -Wall -Werror ;
@@ -68,6 +70,7 @@ if $(OS) = NT { #Windows
 		-I$(NEST_LIBS)/opusfile/include                                             #opusfile
 		-I$(NEST_LIBS)/libopus/include                                              #libopus
 		-I$(NEST_LIBS)/libogg/include                                               #libogg
+		-Ithird_party/include
 		;
 	LINK = g++ -no-pie ;
 	LINKFLAGS = -std=c++17 -g -Wall -Werror ;

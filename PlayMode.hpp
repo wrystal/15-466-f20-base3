@@ -19,7 +19,7 @@ struct PlayMode : Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
-	static constexpr float LANE_WIDTH = 1.0;
+	static constexpr float LANE_WIDTH = 2.0;
 
     enum class CarModel {
         Police,
@@ -60,7 +60,7 @@ struct PlayMode : Mode {
 		const Mesh *mesh_ = nullptr;
 		Scene *scene_;
 		Scene::Transform transform_;
-		static constexpr int PLAYER_SPEED = 10;
+		static constexpr int PLAYER_SPEED = 15;
 	} player{&this->scene};
 
 	struct OncomingCars {
@@ -71,7 +71,7 @@ struct PlayMode : Mode {
 		 */
 		bool update(float elapsed);
 	private:
-		using Car = struct {
+        struct Car {
             CarModel model;
 			Scene::Transform t;
 			int lane_;
@@ -80,7 +80,7 @@ struct PlayMode : Mode {
 		float next_car_interval_ = 1.0;
 		void generate_new_car();
 		void destroy_obsolete_cars();
-		std::vector<Car> cars_;
+		std::list<Car> cars_;
 		Scene *scene_ = nullptr;
 		Player *player_ = nullptr;
 	} oncoming_cars{&this->scene, &this->player};

@@ -11,6 +11,9 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include "random.hpp"
+
+using Random = effolkronium::random_static;
 
 GLuint hexapod_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -281,7 +284,7 @@ PlayMode::RoadTiles::RoadTiles(PlayMode *p, int num_tiles) : p{p}, num_tiles{num
 	for (int i=0; i<num_tiles; i++) {
 		transforms.emplace_back();
 		Scene::Transform &t = transforms.back();
-		t.position = {0, i * ROAD_TILE_DEPTH, 0};
+		t.position = {0, i * ROAD_TILE_DEPTH - 10, 0};
 		t.rotation = {1, 0, 0, 0};
 	}
 }
@@ -313,7 +316,7 @@ void PlayMode::RoadTiles::update(float elapsed) {
 	for (Scene::Transform &t : transforms) {
 		t.position.y -= 10*elapsed;
 		if (t.position.y <= -50) {
-			t.position.y += num_tiles*3;
+			t.position.y += num_tiles*ROAD_TILE_DEPTH;
 		}
 	}
 }
@@ -360,8 +363,26 @@ PlayMode::OncomingCars::OncomingCars(Scene *s, PlayMode::Player *p) {
 bool PlayMode::OncomingCars::update(float elapsed) {
 	next_car_interval_ -= elapsed;
 	if (next_car_interval_ <= 0) {
-//		generate_new_car();
-		next_car_interval_ = 1.0;
+		generate_new_car();
+		next_car_interval_ = Random::get(1.0f, 3.0f);
 	}
+
 	return false;
+}
+
+void PlayMode::OncomingCars::generate_new_car() {
+	cars_.emplace_back();
+	Car &c = cars_.back();
+	c.lane_ = Random::get(-1, 1);
+	c.t.position.x = c.lane_*LANE_WIDTH;
+	c.t.position.y = 100;
+	scene_->drawables.emplace_back(&c.t);
+	auto back_iterator = std::prev(scene_->drawables.end());
+	Scene::Drawable &d = *back_iterator;
+	c.it = std::make_optional(back_iterator);
+	d.pipeline = lit_color_texture_program_pipeline;
+	d.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+	const Mesh *mesh_ = &hexapod_meshes->lookup("Police");//TODO(xiaoqiao)
+	d.pipeline.start = mesh_->start;
+	d.pipeline.count = mesh_->count;
 }
