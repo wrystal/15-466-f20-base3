@@ -21,6 +21,20 @@ struct PlayMode : Mode {
 
 	static constexpr float LANE_WIDTH = 1.0;
 
+    enum class CarModel {
+        Police,
+        Ambulance,
+        TruckFlat,
+        Sedan,
+    };
+
+    const std::map<CarModel, std::string> CAR_TYPE_NAMES = {
+            {CarModel::Police, "Police"},
+            {CarModel::Ambulance, "Ambulance"},
+            {CarModel::TruckFlat, "TruckFlat"},
+            {CarModel::Sedan, "Sedan"},
+    };
+
 	struct RoadTiles {
 		RoadTiles(PlayMode *p, int num_tiles);
 		static constexpr int ROAD_TILE_DEPTH = 2;
@@ -58,6 +72,7 @@ struct PlayMode : Mode {
 		bool update(float elapsed);
 	private:
 		using Car = struct {
+            CarModel model;
 			Scene::Transform t;
 			int lane_;
 			std::optional<decltype(Scene::drawables)::iterator> it;
