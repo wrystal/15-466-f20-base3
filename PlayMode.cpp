@@ -47,25 +47,25 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 //	return new Sound::Sample(data_path("dusty-floor.opus"));
 //});
 
-Load< std::map<PlayMode::CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> std::map<PlayMode::CarModel, Sound::Sample> const * {
-    auto map_p = new std::map<PlayMode::CarModel, Sound::Sample>();
+Load< std::map<CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> std::map<CarModel, Sound::Sample> const * {
+    auto map_p = new std::map<CarModel, Sound::Sample>();
 
     // load horn sound
-    map_p->emplace(PlayMode::CarModel::Sedan, Sound::Sample(data_path("SedanHorn.opus")));
-    map_p->emplace(PlayMode::CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
-    map_p->emplace(PlayMode::CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
-    map_p->emplace(PlayMode::CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
+    map_p->emplace(CarModel::Sedan, Sound::Sample(data_path("SedanHorn.opus")));
+//    map_p->emplace(CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
+//    map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
+//    map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
 
     return map_p;
 });
 
-Load< std::map<PlayMode::CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> std::map<PlayMode::CarModel, Sound::Sample> const * {
-    auto map_p = new std::map<PlayMode::CarModel, Sound::Sample>();
+Load< std::map<CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> std::map<CarModel, Sound::Sample> const * {
+    auto map_p = new std::map<CarModel, Sound::Sample>();
 
-    map_p->emplace(PlayMode::CarModel::Sedan, Sound::Sample(data_path("car_engine_2.opus")));
-    map_p->emplace(PlayMode::CarModel::Police, Sound::Sample(data_path("car_engine_2.opus")));
-    map_p->emplace(PlayMode::CarModel::Ambulance, Sound::Sample(data_path("car_engine_2.opus")));
-    map_p->emplace(PlayMode::CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatEngine.opus")));
+    map_p->emplace(CarModel::Sedan, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(CarModel::Police, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatEngine.opus")));
 
     return map_p;
 });
@@ -373,6 +373,7 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 	constexpr float ONCOMING_CAR_SPEED = 20.0;
 	for (auto &car : cars_) {
 		car.t.position.y -= elapsed*ONCOMING_CAR_SPEED;
+		car.playingSample->set_position(car.t.position);
 	}
 
 	// remove unused cars
@@ -401,9 +402,22 @@ void PlayMode::OncomingCars::generate_new_car() {
 	c.it = std::make_optional(back_iterator);
 	d.pipeline = lit_color_texture_program_pipeline;
 	d.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
-	const Mesh *mesh_ = &hexapod_meshes->lookup("Police");//TODO(xiaoqiao)
+
+	c.model = Random::get({
+//	    CarModel::Police,
+//	    CarModel::Ambulance,
+//	    CarModel::TruckFlat,
+	    CarModel::Sedan
+	});
+
+	const Mesh *mesh_ = &hexapod_meshes->lookup(CAR_MODEL_NAMES.at(c.model));
 	d.pipeline.start = mesh_->start;
 	d.pipeline.count = mesh_->count;
+
+	//add horn sound to this car
+	const Sound::Sample &horn_sample = (*horn_samples).at(c.model);
+    c.playingSample = Sound::loop_3D(horn_sample, 1.0f, c.t.position, 10.0f);
+
 }
 
 void PlayMode::OncomingCars::detach_obsolete_car(Car &c) {

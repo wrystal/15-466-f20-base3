@@ -10,6 +10,23 @@
 #include <deque>
 #include <optional>
 
+
+enum class CarModel {
+    Police,
+    Ambulance,
+    TruckFlat,
+    Sedan,
+};
+
+const std::map<CarModel, std::string> CAR_MODEL_NAMES = {
+        {CarModel::Police, "Police"},
+//        {CarModel::Ambulance, "Ambulance"},
+        {CarModel::Ambulance, "Van"},
+        {CarModel::TruckFlat, "TruckFlat"},
+//        {CarModel::Sedan, "Sedan"},
+        {CarModel::Sedan, "Van"},
+};
+
 struct PlayMode : Mode {
 	PlayMode();
 	virtual ~PlayMode();
@@ -21,19 +38,7 @@ struct PlayMode : Mode {
 
 	static constexpr float LANE_WIDTH = 2.0;
 
-    enum class CarModel {
-        Police,
-        Ambulance,
-        TruckFlat,
-        Sedan,
-    };
 
-    const std::map<CarModel, std::string> CAR_TYPE_NAMES = {
-            {CarModel::Police, "Police"},
-            {CarModel::Ambulance, "Ambulance"},
-            {CarModel::TruckFlat, "TruckFlat"},
-            {CarModel::Sedan, "Sedan"},
-    };
 
 	struct RoadTiles {
 		RoadTiles(PlayMode *p, int num_tiles);
@@ -76,6 +81,7 @@ struct PlayMode : Mode {
 			Scene::Transform t;
 			int lane_;
 			std::optional<decltype(Scene::drawables)::iterator> it;
+            std::shared_ptr<Sound::PlayingSample> playingSample;
 		};
 		float next_car_interval_ = 1.0;
 		void generate_new_car();
