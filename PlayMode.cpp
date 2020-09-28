@@ -43,27 +43,31 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("dusty-floor.opus"));
-});
+//Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
+//	return new Sound::Sample(data_path("dusty-floor.opus"));
+//});
 
 Load< std::map<PlayMode::CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> std::map<PlayMode::CarModel, Sound::Sample> const * {
-    std::map<PlayMode::CarModel, Sound::Sample> map;
+    auto map_p = new std::map<PlayMode::CarModel, Sound::Sample>();
 
     // load horn sound
-    map[PlayMode::CarModel::Sedan] = Sound::Sample(data_path("SedanHorn.opus"));
-    map[PlayMode::CarModel::Police] = Sound::Sample(data_path("PoliceHorn.opus"));
-    map[PlayMode::CarModel::Ambulance] = Sound::Sample(data_path("AmbulanceHorn.opus"));
-    map[PlayMode::CarModel::TruckFlat] = Sound::Sample(data_path("TruckFlatHorn.opus"));
+    map_p->emplace(PlayMode::CarModel::Sedan, Sound::Sample(data_path("SedanHorn.opus")));
+    map_p->emplace(PlayMode::CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
+    map_p->emplace(PlayMode::CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
+    map_p->emplace(PlayMode::CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
+
+    return map_p;
 });
 
 Load< std::map<PlayMode::CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> std::map<PlayMode::CarModel, Sound::Sample> const * {
-    std::map<PlayMode::CarModel, Sound::Sample> map;
+    auto map_p = new std::map<PlayMode::CarModel, Sound::Sample>();
 
-    map[PlayMode::CarModel::Sedan] = Sound::Sample(data_path("car_engine_2.opus"));
-    map[PlayMode::CarModel::Police] = Sound::Sample(data_path("car_engine_2.opus"));
-    map[PlayMode::CarModel::Ambulance] = Sound::Sample(data_path("car_engine_2.opus"));
-    map[PlayMode::CarModel::TruckFlat] = Sound::Sample(data_path("TruckFlatEngine.opus"));
+    map_p->emplace(PlayMode::CarModel::Sedan, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(PlayMode::CarModel::Police, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(PlayMode::CarModel::Ambulance, Sound::Sample(data_path("car_engine_2.opus")));
+    map_p->emplace(PlayMode::CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatEngine.opus")));
+
+    return map_p;
 });
 
 //Load< Sound::Sample > background_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
