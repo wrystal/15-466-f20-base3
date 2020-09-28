@@ -1,4 +1,4 @@
-name: Build
+:q1name: Build
 on:
   push:
   release:
