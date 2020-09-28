@@ -326,7 +326,7 @@ void PlayMode::RoadTiles::update(float elapsed) {
 }
 
 PlayMode::Player::Player(Scene *s) : scene_{s} {
-	transform_.position = {0, -5, 0};
+	transform_.position = {0, -5, 0.1};
 	transform_.rotation = glm::angleAxis<float>(
 		glm::radians(180.0),
 		glm::vec3(0, 0, 1)
@@ -396,6 +396,7 @@ void PlayMode::OncomingCars::generate_new_car() {
 	c.lane_ = Random::get(-1, 1);
 	c.t.position.x = c.lane_*LANE_WIDTH;
 	c.t.position.y = 100;
+	c.t.position.z = 0.1;
 	scene_->drawables.emplace_back(&c.t);
 	auto back_iterator = std::prev(scene_->drawables.end());
 	Scene::Drawable &d = *back_iterator;
