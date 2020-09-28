@@ -16,15 +16,16 @@ enum class CarModel {
     Ambulance,
     TruckFlat,
     Sedan,
+    Van,
 };
 
 const std::map<CarModel, std::string> CAR_MODEL_NAMES = {
         {CarModel::Police, "Police"},
-//        {CarModel::Ambulance, "Ambulance"},
-        {CarModel::Ambulance, "Van"},
+        {CarModel::Ambulance, "Ambulance"},
         {CarModel::TruckFlat, "TruckFlat"},
 //        {CarModel::Sedan, "Sedan"},
         {CarModel::Sedan, "Van"},
+        {CarModel::Van, "Van"},
 };
 
 struct PlayMode : Mode {

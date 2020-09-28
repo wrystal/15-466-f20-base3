@@ -26,7 +26,7 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("cars.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
 
-		if (mesh_name=="TruckFlat" || mesh_name=="Van" || mesh_name=="Police" || mesh_name == "RoadTile") {
+		if (mesh_name=="TruckFlat" || mesh_name=="Van" || mesh_name=="Police" || mesh_name == "RoadTile" || mesh_name=="Ambulance") {
 			return;
 		}
 
@@ -187,7 +187,12 @@ void PlayMode::update(float elapsed) {
 //	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
 	road_tiles.update(elapsed);
 	player.update(elapsed);
-	oncoming_cars.update(elapsed);
+	bool is_collided = oncoming_cars.update(elapsed);
+
+	if(is_collided) {
+
+	}
+
 	{
 		if (left.pressed && left.downs) {
 			player.goLeft();
@@ -284,7 +289,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 //}
 
 PlayMode::RoadTiles::RoadTiles(PlayMode *p, int num_tiles) : p{p}, num_tiles{num_tiles} {
-	mesh = &hexapod_meshes->lookup("RoadTile"); // TODO(xiaoqiao): the real name?
+	mesh = &hexapod_meshes->lookup("RoadTile");
 	for (int i=0; i<num_tiles; i++) {
 		transforms.emplace_back();
 		Scene::Transform &t = transforms.back();
