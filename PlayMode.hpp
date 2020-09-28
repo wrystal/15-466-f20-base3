@@ -65,7 +65,7 @@ struct PlayMode : Mode {
 		const Mesh *mesh_ = nullptr;
 		Scene *scene_;
 		Scene::Transform transform_;
-		static constexpr int PLAYER_SPEED = 15;
+		static constexpr float PLAYER_SPEED = 5.0f;
 	} player{&this->scene};
 
 	struct OncomingCars {
@@ -79,11 +79,15 @@ struct PlayMode : Mode {
         struct Car {
             CarModel model;
 			Scene::Transform t;
-			int lane_;
+			int lane_; // -1, 0, 1
 			std::optional<decltype(Scene::drawables)::iterator> it;
-            std::shared_ptr<Sound::PlayingSample> playingSample;
+	        std::shared_ptr<Sound::PlayingSample> engineSample;
+	        std::shared_ptr<Sound::PlayingSample> hornSample;
 		};
+
 		float next_car_interval_ = 1.0;
+		float sound_position_multiplier = 10.0f;
+		float car_disappear_y = -10.0f;
 		void generate_new_car();
 		void detach_obsolete_car(Car &c);
 		std::list<Car> cars_;

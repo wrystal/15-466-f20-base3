@@ -48,15 +48,15 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 //});
 
 Load< std::map<CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> std::map<CarModel, Sound::Sample> const * {
-    auto map_p = new std::map<CarModel, Sound::Sample>();
+	auto map_p = new std::map<CarModel, Sound::Sample>();
 
-    // load horn sound
-    map_p->emplace(CarModel::Sedan, Sound::Sample(data_path("SedanHorn.opus")));
-//    map_p->emplace(CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
-//    map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
-//    map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
+	// load horn sound
+	map_p->emplace(CarModel::Sedan, Sound::Sample(data_path("SedanHorn.opus")));
+	map_p->emplace(CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
+	map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
+	map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
 
-    return map_p;
+	return map_p;
 });
 
 Load< std::map<CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> std::map<CarModel, Sound::Sample> const * {
@@ -368,17 +368,29 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 	next_car_interval_ -= elapsed;
 	if (next_car_interval_ <= 0) {
 		generate_new_car();
-		next_car_interval_ = Random::get(1.0f, 3.0f);
+		next_car_interval_ = Random::get(3.0f, 6.0f);
 	}
 	constexpr float ONCOMING_CAR_SPEED = 20.0;
 	for (auto &car : cars_) {
 		car.t.position.y -= elapsed*ONCOMING_CAR_SPEED;
-		car.playingSample->set_position(car.t.position);
+		// update engine sound
+		glm::vec3 sound_position = car.t.position;
+		sound_position.x = float(car.t.position.x - player_->position_) * sound_position_multiplier;
+		car.engineSample->set_position(sound_position);
+		car.hornSample->set_position(sound_position);
+
+		if (fabs(car.t.position.x - player_->position_) <= 0.2 &&
+			fabs(player_->transform_.position.y - car.t.position.y) <= 50.0f) {
+			// if player is on the same lane of the oncoming car, and they are close, horn
+			car.hornSample->set_volume(1.0f);
+ 		} else {
+			car.hornSample->set_volume(0.0f);
+		}
 	}
 
 	// remove unused cars
 	for (auto it = cars_.begin(); it != cars_.end();) {
-		if (it->t.position.y < -10) {
+		if (it->t.position.y < car_disappear_y) {
 			detach_obsolete_car(*it);
 			it = cars_.erase(it);
 			continue;
@@ -395,7 +407,7 @@ void PlayMode::OncomingCars::generate_new_car() {
 	Car &c = cars_.back();
 	c.lane_ = Random::get(-1, 1);
 	c.t.position.x = c.lane_*LANE_WIDTH;
-	c.t.position.y = 100;
+	c.t.position.y = 150;
 	scene_->drawables.emplace_back(&c.t);
 	auto back_iterator = std::prev(scene_->drawables.end());
 	Scene::Drawable &d = *back_iterator;
@@ -404,23 +416,39 @@ void PlayMode::OncomingCars::generate_new_car() {
 	d.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
 
 	c.model = Random::get({
-//	    CarModel::Police,
-//	    CarModel::Ambulance,
-//	    CarModel::TruckFlat,
-	    CarModel::Sedan
-	});
+			                      CarModel::Police,
+			                      CarModel::Ambulance,
+			                      CarModel::TruckFlat,
+			                      CarModel::Sedan
+	                      });
 
 	const Mesh *mesh_ = &hexapod_meshes->lookup(CAR_MODEL_NAMES.at(c.model));
 	d.pipeline.start = mesh_->start;
 	d.pipeline.count = mesh_->count;
 
 	//add horn sound to this car
+//	const Sound::Sample &horn_sample = (*horn_samples).at(c.model);
+//	glm::vec3 sound_position = c.t.position;
+//	sound_position.x = float(c.t.position.x - player_->position_) * sound_position_multiplier;
+	const Sound::Sample &engine_sample = (*engine_samples).at(c.model);
 	const Sound::Sample &horn_sample = (*horn_samples).at(c.model);
-    c.playingSample = Sound::loop_3D(horn_sample, 1.0f, c.t.position, 10.0f);
 
+	glm::vec3 sound_position = c.t.position;
+	sound_position.x = float(c.t.position.x - player_->position_) * sound_position_multiplier;
+	c.engineSample = Sound::loop_3D(engine_sample, 1.0f, sound_position, 4.0f);
+	/* Set it to silence */
+	c.hornSample = Sound::loop_3D(horn_sample, 0.0f, sound_position, 4.0f);
 }
 
 void PlayMode::OncomingCars::detach_obsolete_car(Car &c) {
 	scene_->drawables.erase(c.it.value());
 	c.it = std::nullopt;
+	if(c.engineSample) {
+		c.engineSample->stop(2);
+	}
+	if(c.hornSample) {
+		c.hornSample->stop(2);
+	}
+	c.engineSample = nullptr;
+	c.hornSample = nullptr;
 }
