@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <deque>
+#include <optional>
 
 struct PlayMode : Mode {
 	PlayMode();
@@ -22,6 +23,7 @@ struct PlayMode : Mode {
 
 	struct RoadTiles {
 		RoadTiles(PlayMode *p, int num_tiles);
+		static constexpr int ROAD_TILE_DEPTH = 2;
 		void attachToDrawable();
 		void detachFromDrawable();
 		void update(float elapsed);
@@ -41,11 +43,32 @@ struct PlayMode : Mode {
 		void update(float elapsed);
 		float position_ = 0;
 		int target_lane_ = 0;
-		const Mesh *mesh_;
+		const Mesh *mesh_ = nullptr;
 		Scene *scene_;
 		Scene::Transform transform_;
 		static constexpr int PLAYER_SPEED = 10;
 	} player{&this->scene};
+
+	struct OncomingCars {
+	public:
+		OncomingCars(Scene *s, Player *p);
+		/**
+		 * @return true if a collision happened, and the game should end
+		 */
+		bool update(float elapsed);
+	private:
+		using Car = struct {
+			Scene::Transform t;
+			int lane_;
+			std::optional<decltype(Scene::drawables)::iterator> it;
+		};
+		float next_car_interval_ = 1.0;
+		void generate_new_car();
+		void destroy_obsolete_cars();
+		std::vector<Car> cars_;
+		Scene *scene_ = nullptr;
+		Player *player_ = nullptr;
+	} oncoming_cars{&this->scene, &this->player};
 
 	//----- game state -----
 

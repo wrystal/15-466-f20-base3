@@ -23,7 +23,7 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("cars.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
 
-		if (mesh_name=="truckFlat" || mesh_name=="van" || mesh_name=="police") {
+		if (mesh_name=="TruckFlat" || mesh_name=="Van" || mesh_name=="Police" || mesh_name == "RoadTile") {
 			return;
 		}
 
@@ -258,11 +258,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 //}
 
 PlayMode::RoadTiles::RoadTiles(PlayMode *p, int num_tiles) : p{p}, num_tiles{num_tiles} {
-	mesh = &hexapod_meshes->lookup("truckFlat"); // TODO(xiaoqiao): the real name?
+	mesh = &hexapod_meshes->lookup("RoadTile"); // TODO(xiaoqiao): the real name?
 	for (int i=0; i<num_tiles; i++) {
 		transforms.emplace_back();
 		Scene::Transform &t = transforms.back();
-		t.position = {2, i * 3, 0};
+		t.position = {0, i * ROAD_TILE_DEPTH, 0};
 		t.rotation = {1, 0, 0, 0};
 	}
 }
@@ -306,7 +306,7 @@ PlayMode::Player::Player(Scene *s) : scene_{s} {
 		glm::vec3(0, 0, 1)
 	);
 
-	mesh_ = &hexapod_meshes->lookup("truckFlat");
+	mesh_ = &hexapod_meshes->lookup("TruckFlat");
 
 }
 
@@ -331,4 +331,18 @@ void PlayMode::Player::update(float elapsed) {
 		}
 	}
 	transform_.position.x = position_;
+}
+
+PlayMode::OncomingCars::OncomingCars(Scene *s, PlayMode::Player *p) {
+	this->scene_ = s;
+	this->player_ = p;
+}
+
+bool PlayMode::OncomingCars::update(float elapsed) {
+	next_car_interval_ -= elapsed;
+	if (next_car_interval_ <= 0) {
+//		generate_new_car();
+		next_car_interval_ = 1.0;
+	}
+	return false;
 }
