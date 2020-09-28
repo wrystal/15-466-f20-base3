@@ -141,24 +141,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = false;
 			return true;
 		}
-	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-//		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-//			SDL_SetRelativeMouseMode(SDL_TRUE);
-//			return true;
-//		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-//		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-//			glm::vec2 motion = glm::vec2(
-//				evt.motion.xrel / float(window_size.y),
-//				-evt.motion.yrel / float(window_size.y)
-//			);
-//			camera->transform->rotation = glm::normalize(
-//				camera->transform->rotation
-//				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-//				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-//			);
-//			return true;
-//		}
 	}
 
 	return false;
@@ -193,6 +175,8 @@ void PlayMode::update(float elapsed) {
 
 	}
 
+	oncoming_cars.update(elapsed);
+	updateBrightness(elapsed);
 	{
 		if (left.pressed && left.downs) {
 			player.goLeft();
@@ -247,10 +231,10 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
 	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
+	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f * brightness, 1.0f * brightness, 0.95f * brightness)));
 	glUseProgram(0);
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	glClearColor(0.5f * brightness, 0.5f * brightness, 0.5f * brightness, 1.0f);
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -281,6 +265,39 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
 	GL_ERRORS();
+}
+void PlayMode::updateBrightness(float elapsed) {
+	if (!brightness_animation.empty()) {
+//		std::cout << "elapsed: " << elapsed << std::endl;
+//		for (auto p : brightness_animation) {
+//			std::cout << p.first << ' ' << p.second << '\n';
+//		}
+		const float &target_val = brightness_animation.front().first;
+		float &transition_time = brightness_animation.front().second;
+		transition_time -= elapsed;
+		if (transition_time <= 0) {
+			brightness_animation.pop_front();
+			return;
+		}
+		float speed = (target_val - brightness)/transition_time;
+		float new_brightness = brightness + speed*elapsed;
+		// if the difference is small enough, or if
+		// it has overshoot,
+		if (std::abs(new_brightness - target_val) < 0.01 ||
+			std::signbit(target_val - brightness)!=std::signbit(target_val - new_brightness)) {
+			new_brightness = target_val;
+		}
+		brightness = new_brightness;
+	} else {
+		// Add Random lightnings
+		brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(15.0, 30.0));
+		for (int i = 0; i < Random::get<int>(1, 2); i++) {
+			brightness_animation.emplace_back(MED_BRIGHTNESS, 0.1);
+			brightness_animation.emplace_back(MED_BRIGHTNESS, 0.1);
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.1);
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(0.05, 0.2));
+		}
+	}
 }
 
 //glm::vec3 PlayMode::get_leg_tip_position() {
@@ -404,6 +421,14 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 		}
 	}
 
+	// is there any car collision?
+	for (auto &car : cars_) {
+		if (car.lane_==player_->target_lane_
+			&& std::abs(car.t.position.y - player_->transform_.position.y) < 2) {
+			// collision detected
+			return true;
+		}
+	}
 	return false;
 }
 

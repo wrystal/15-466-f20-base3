@@ -97,6 +97,16 @@ struct PlayMode : Mode {
 	} oncoming_cars{&this->scene, &this->player};
 
 	//----- game state -----
+	static constexpr float LOW_BRIGHTNESS = 0.05;
+	static constexpr float MED_BRIGHTNESS = 0.4;
+	static constexpr float HIGH_BRIGHTNESS = 1;
+	float brightness = 1.0;
+	std::deque<std::pair<float, float>> brightness_animation = {
+		{HIGH_BRIGHTNESS, 10},
+		{LOW_BRIGHTNESS, 10}
+	};
+
+	void updateBrightness(float elapsed);
 
 	//input tracking:
 	struct Button {
