@@ -23,6 +23,10 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("cars.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
 
+		if (mesh_name=="truckFlat" || mesh_name=="van" || mesh_name=="police") {
+			return;
+		}
+
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
@@ -67,6 +71,8 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	// (note: position will be over-ridden in update())
 //	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
 //	Sound::loop(*background_music_sample, 0.1f, -1.0f);
+	road_tiles.attachToDrawable();
+	player.attachToDrawable();
 }
 
 PlayMode::~PlayMode() {
@@ -110,23 +116,23 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			return true;
 		}
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
+//		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
+//			SDL_SetRelativeMouseMode(SDL_TRUE);
+//			return true;
+//		}
 	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
-			return true;
-		}
+//		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
+//			glm::vec2 motion = glm::vec2(
+//				evt.motion.xrel / float(window_size.y),
+//				-evt.motion.yrel / float(window_size.y)
+//			);
+//			camera->transform->rotation = glm::normalize(
+//				camera->transform->rotation
+//				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
+//				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
+//			);
+//			return true;
+//		}
 	}
 
 	return false;
@@ -153,27 +159,38 @@ void PlayMode::update(float elapsed) {
 
 	//move sound to follow leg tip position:
 //	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
+	road_tiles.update(elapsed);
+	player.update(elapsed);
+
+	{
+		if (left.pressed && left.downs) {
+			player.goLeft();
+		}
+		if (right.pressed && right.downs) {
+			player.goRight();
+		}
+	}
 
 	//move camera:
 	{
 
-		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
-
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 forward = -frame[2];
-
-		camera->transform->position += move.x * right + move.y * forward;
+//		//combine inputs into a move:
+//		constexpr float PlayerSpeed = 30.0f;
+//		glm::vec2 move = glm::vec2(0.0f);
+//		if (left.pressed && !right.pressed) move.x =-1.0f;
+//		if (!left.pressed && right.pressed) move.x = 1.0f;
+//		if (down.pressed && !up.pressed) move.y =-1.0f;
+//		if (!down.pressed && up.pressed) move.y = 1.0f;
+//
+//		//make it so that moving diagonally doesn't go faster:
+//		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
+//
+//		glm::mat4x3 frame = camera->transform->make_local_to_parent();
+//		glm::vec3 right = frame[0];
+//		//glm::vec3 up = frame[1];
+//		glm::vec3 forward = -frame[2];
+//
+//		camera->transform->position += move.x * right + move.y * forward;
 	}
 
 	{ //update listener to camera position:
@@ -239,3 +256,79 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 //	//the vertex position here was read from the model in blender:
 //	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
 //}
+
+PlayMode::RoadTiles::RoadTiles(PlayMode *p, int num_tiles) : p{p}, num_tiles{num_tiles} {
+	mesh = &hexapod_meshes->lookup("truckFlat"); // TODO(xiaoqiao): the real name?
+	for (int i=0; i<num_tiles; i++) {
+		transforms.emplace_back();
+		Scene::Transform &t = transforms.back();
+		t.position = {2, i * 3, 0};
+		t.rotation = {1, 0, 0, 0};
+	}
+}
+
+void PlayMode::RoadTiles::attachToDrawable() {
+	int current_idx = 0;
+	for (auto &t : transforms) {
+		p->scene.drawables.emplace_back(&t);
+		auto &d = p->scene.drawables.back();
+		d.pipeline = lit_color_texture_program_pipeline;
+		d.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+		d.pipeline.start = mesh->start;
+		d.pipeline.count = mesh->count;
+		this->drawable_iterators.push_back(std::prev(p->scene.drawables.end()));
+		current_idx++;
+	}
+}
+
+
+void PlayMode::RoadTiles::detachFromDrawable() {
+	assert(!drawable_iterators.empty());
+	for (const auto it : drawable_iterators) {
+		p->scene.drawables.erase(it);
+	}
+	drawable_iterators.clear();
+}
+
+void PlayMode::RoadTiles::update(float elapsed) {
+	for (Scene::Transform &t : transforms) {
+		t.position.y -= 10*elapsed;
+		if (t.position.y <= -50) {
+			t.position.y += num_tiles*3;
+		}
+	}
+}
+
+PlayMode::Player::Player(Scene *s) : scene_{s} {
+	transform_.position = {0, -5, 0};
+	transform_.rotation = glm::angleAxis<float>(
+		glm::radians(180.0),
+		glm::vec3(0, 0, 1)
+	);
+
+	mesh_ = &hexapod_meshes->lookup("truckFlat");
+
+}
+
+void PlayMode::Player::attachToDrawable() {
+	scene_->drawables.emplace_back(&transform_);
+	auto &d = scene_->drawables.back();
+	d.pipeline = lit_color_texture_program_pipeline;
+	d.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+	d.pipeline.start = mesh_->start;
+	d.pipeline.count = mesh_->count;
+}
+
+void PlayMode::Player::update(float elapsed) {
+	float target_position = (float) target_lane_ * LANE_WIDTH;
+	if (std::abs(target_position - position_) <= PLAYER_SPEED*elapsed) {
+		position_ = target_position;
+	} else {
+		if (target_position > position_) {
+			position_ += PLAYER_SPEED*elapsed;
+		} else {
+			position_ -= PLAYER_SPEED*elapsed;
+		}
+	}
+	transform_.position.x = position_;
+}
