@@ -14,5 +14,8 @@ How To Play:
 
 Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
 
+* C++ Library: https://github.com/effolkronium/random . Author: effolkronium.
+* Background music: Patron Saint of Heists. Author: Bryan Teoh. URL: https://freepd.com/scoring.php
+
 This game was built with [NEST](NEST.md).
 
