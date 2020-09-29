@@ -243,11 +243,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, 1.0 - 1.2f * H + ofs, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-			lines.draw_text(R"(Click 'S' 'D' to change lane)",
+			lines.draw_text(R"(Press 'S' 'D' to control the car)",
 			                glm::vec3(-aspect + 0.1f * H + 0.05f, -0.95f + 0.1f * H, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-			lines.draw_text(R"(Click 'S' 'D' to change lane)",
+			lines.draw_text(R"(Press 'S' 'D' to control the car)",
 			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, -0.95f + 0.1f * H + ofs, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
@@ -264,8 +264,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 		}
-
-
 	}
 	GL_ERRORS();
 }
