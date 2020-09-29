@@ -19,3 +19,7 @@ Sources: (TODO: list a source URL for any assets you did not create yourself. Ma
 
 This game was built with [NEST](NEST.md).
 
+# Resource
+
+Sound effect:
+- Thunder: http://soundbible.com/2053-Thunder-Sound-FX.html

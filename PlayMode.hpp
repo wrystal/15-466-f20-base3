@@ -59,14 +59,22 @@ struct PlayMode : Mode {
 		void goLeft() { target_lane_ = std::max(-1, target_lane_ - 1); }
 		void goRight() { target_lane_ = std::min(1, target_lane_ + 1); };
 		void attachToDrawable();
-		void detachFromDrawable(); // TODO(xiaoqiao): not implemented -- is this really needed?
 		void update(float elapsed);
+		void enter_crash_phase();
 		float position_ = 0;
 		int target_lane_ = 0;
+		bool crashed = false;
 		const Mesh *mesh_ = nullptr;
 		Scene *scene_;
 		Scene::Transform transform_;
 		static constexpr float PLAYER_SPEED = 5.0f;
+
+		// crash related
+		float sec_since_crash = 0.0f;
+		static constexpr float INIT_Z_SPEED = 10.0f;
+	    static constexpr float ROTATE_SPEED = 720.0f; // 720 degree/seconds
+		void crash_animation(float elapsed);
+
 	} player{&this->scene};
 
 	struct OncomingCars {
@@ -76,14 +84,18 @@ struct PlayMode : Mode {
 		 * @return true if a collision happened, and the game should end
 		 */
 		bool update(float elapsed);
+		/**
+		 * Called when crash happens
+		 */
+		void mute_all_cars();
 	private:
         struct Car {
             CarModel model;
 			Scene::Transform t;
 			int lane_; // -1, 0, 1
 			std::optional<decltype(Scene::drawables)::iterator> it;
-	        std::shared_ptr<Sound::PlayingSample> engineSample;
-	        std::shared_ptr<Sound::PlayingSample> hornSample;
+	        std::shared_ptr<Sound::PlayingSample> engine_sample;
+	        std::shared_ptr<Sound::PlayingSample> horn_sample;
 		};
 
 		float next_car_interval_ = 1.0;
@@ -97,16 +109,20 @@ struct PlayMode : Mode {
 	} oncoming_cars{&this->scene, &this->player};
 
 	//----- game state -----
-	static constexpr float LOW_BRIGHTNESS = 0.05;
-	static constexpr float MED_BRIGHTNESS = 0.4;
-	static constexpr float HIGH_BRIGHTNESS = 1;
+
+
+	static constexpr float LOW_BRIGHTNESS = 0.05f;
+	static constexpr float MED_BRIGHTNESS = 0.4f;
+	static constexpr float HIGH_BRIGHTNESS = 1.0f;
 	float brightness = 1.0;
 	std::deque<std::pair<float, float>> brightness_animation = {
-		{HIGH_BRIGHTNESS, 10},
-		{LOW_BRIGHTNESS, 10}
+//		{HIGH_BRIGHTNESS, 10},
+		{LOW_BRIGHTNESS, 5}
 	};
 
-	void updateBrightness(float elapsed);
+	void update_brightness(float elapsed);
+	// record the bgm sample
+	std::shared_ptr<Sound::PlayingSample> bgm_sample;
 
 	//input tracking:
 	struct Button {

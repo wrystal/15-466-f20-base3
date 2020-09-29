@@ -74,21 +74,27 @@ Load< Sound::Sample > background_music_sample(LoadTagDefault, []() -> Sound::Sam
 	return new Sound::Sample(data_path("bgm.opus"));
 });
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
-	//get pointers to leg for convenience:
-//	for (auto &transform : scene.transforms) {
-//		if (transform.name == "Hip.FL") hip = &transform;
-//		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-//		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-//	}
-//	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-//	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-//	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
-//
-//	hip_base_rotation = hip->rotation;
-////	upper_leg_base_rotation = upper_leg->rotation;
-//	lower_leg_base_rotation = lower_leg->rotation;
+Load< Sound::Sample > crash_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("crash.opus"));
+});
 
+
+Load< Sound::Sample > fall_to_ground_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("hitTheGround.opus"));
+});
+
+Load< std::vector<Sound::Sample>> thunder_sample_vec(LoadTagDefault, []() -> std::vector<Sound::Sample> const * {
+	auto vec_p = new std::vector<Sound::Sample>();
+	vec_p->emplace_back(Sound::Sample(data_path("thunder1.opus")));
+	vec_p->emplace_back(Sound::Sample(data_path("thunder2.opus")));
+	vec_p->emplace_back(Sound::Sample(data_path("thunder3.opus")));
+	vec_p->emplace_back(Sound::Sample(data_path("thunder4.opus")));
+	vec_p->emplace_back(Sound::Sample(data_path("thunder5.opus")));
+	return vec_p;
+});
+
+
+PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
@@ -96,7 +102,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 //	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
-	Sound::loop(*background_music_sample, 0.1f, 0.0f);
+	bgm_sample = Sound::loop(*background_music_sample, 0.1f, 0.0f);
 	road_tiles.attachToDrawable();
 	player.attachToDrawable();
 }
@@ -165,26 +171,35 @@ void PlayMode::update(float elapsed) {
 //		glm::vec3(0.0f, 0.0f, 1.0f)
 //	);
 
-	//move sound to follow leg tip position:
-//	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
-	road_tiles.update(elapsed);
+
+	if(!player.crashed) {
+		road_tiles.update(elapsed);
+		oncoming_cars.update(elapsed);
+		update_brightness(elapsed);
+		bool is_collided = oncoming_cars.update(elapsed);
+		if(is_collided) {
+			player.enter_crash_phase();
+			oncoming_cars.mute_all_cars();
+			bgm_sample->stop();
+			brightness_animation.clear();
+			brightness = 1.0f;
+		}
+
+		{
+			if (left.pressed && left.downs) {
+				player.goLeft();
+			}
+			if (right.pressed && right.downs) {
+				player.goRight();
+			}
+		}
+	}
+
 	player.update(elapsed);
-	bool is_collided = oncoming_cars.update(elapsed);
 
-	if(is_collided) {
 
-	}
 
-	oncoming_cars.update(elapsed);
-	updateBrightness(elapsed);
-	{
-		if (left.pressed && left.downs) {
-			player.goLeft();
-		}
-		if (right.pressed && right.downs) {
-			player.goRight();
-		}
-	}
+
 
 	//move camera:
 	{
@@ -227,7 +242,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
 	//set up light type and position for lit_color_texture_program:
-	// TODO: consider using the Light(s) in the scene to do this
 	glUseProgram(lit_color_texture_program->program);
 	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
 	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
@@ -266,7 +280,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	}
 	GL_ERRORS();
 }
-void PlayMode::updateBrightness(float elapsed) {
+void PlayMode::update_brightness(float elapsed) {
 	if (!brightness_animation.empty()) {
 //		std::cout << "elapsed: " << elapsed << std::endl;
 //		for (auto p : brightness_animation) {
@@ -277,6 +291,15 @@ void PlayMode::updateBrightness(float elapsed) {
 		transition_time -= elapsed;
 		if (transition_time <= 0) {
 			brightness_animation.pop_front();
+			if(!brightness_animation.empty()) {
+				if(fabs(brightness_animation.front().first - HIGH_BRIGHTNESS) <= 1e-3 &&
+					fabs(target_val - LOW_BRIGHTNESS) <= 1e-3) {
+					// previous is dark, next is bright, then play thunder effect
+					int idx = Random::get<int>(0, thunder_sample_vec->size()-1);
+					Sound::play_3D(
+							(*thunder_sample_vec).at(idx), 1.0f, player.transform_.position, 4.0f);
+				}
+			}
 			return;
 		}
 		float speed = (target_val - brightness)/transition_time;
@@ -289,14 +312,10 @@ void PlayMode::updateBrightness(float elapsed) {
 		}
 		brightness = new_brightness;
 	} else {
-		// Add Random lightnings
-		brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(15.0, 30.0));
-		for (int i = 0; i < Random::get<int>(1, 2); i++) {
-			brightness_animation.emplace_back(MED_BRIGHTNESS, 0.1);
-			brightness_animation.emplace_back(MED_BRIGHTNESS, 0.1);
-			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.1);
-			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(0.05, 0.2));
-		}
+		brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3);
+		// every 10-15 s there is a thunder
+		brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(10.0, 15.0));
+		brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.2);
 	}
 }
 
@@ -329,15 +348,6 @@ void PlayMode::RoadTiles::attachToDrawable() {
 	}
 }
 
-
-void PlayMode::RoadTiles::detachFromDrawable() {
-	assert(!drawable_iterators.empty());
-	for (const auto it : drawable_iterators) {
-		p->scene.drawables.erase(it);
-	}
-	drawable_iterators.clear();
-}
-
 void PlayMode::RoadTiles::update(float elapsed) {
 	for (Scene::Transform &t : transforms) {
 		t.position.y -= 10*elapsed;
@@ -348,7 +358,7 @@ void PlayMode::RoadTiles::update(float elapsed) {
 }
 
 PlayMode::Player::Player(Scene *s) : scene_{s} {
-	transform_.position = {0.0f, -5.0f, 0.1f};
+	transform_.position = {0.0f, -5.0f, 0.0f};
 	transform_.rotation = glm::angleAxis<float>(
 		glm::radians((float)180.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f)
@@ -368,17 +378,52 @@ void PlayMode::Player::attachToDrawable() {
 }
 
 void PlayMode::Player::update(float elapsed) {
-	float target_position = (float) target_lane_ * LANE_WIDTH;
-	if (std::abs(target_position - position_) <= PLAYER_SPEED*elapsed) {
-		position_ = target_position;
+	if(crashed) {
+		crash_animation(elapsed);
 	} else {
-		if (target_position > position_) {
-			position_ += PLAYER_SPEED*elapsed;
+		float target_position = (float) target_lane_ * LANE_WIDTH;
+		if (std::abs(target_position - position_) <= PLAYER_SPEED*elapsed) {
+			position_ = target_position;
 		} else {
-			position_ -= PLAYER_SPEED*elapsed;
+			if (target_position > position_) {
+				position_ += PLAYER_SPEED*elapsed;
+			} else {
+				position_ -= PLAYER_SPEED*elapsed;
+			}
 		}
+		transform_.position.x = position_;
 	}
-	transform_.position.x = position_;
+}
+
+void PlayMode::Player::crash_animation(float elapsed) {
+	if(sec_since_crash >= 2 * INIT_Z_SPEED / 9.8) {
+		return;
+	}
+
+	sec_since_crash += elapsed;
+	float z = float(INIT_Z_SPEED * sec_since_crash) - 0.5 * 9.8 * sec_since_crash * sec_since_crash;
+	transform_.position.z = z;
+
+	glm::vec3 rotate_axis = glm::normalize(
+			glm::vec3(Random::get(0.0f, 1.0f),
+						Random::get(0.0f, 1.0f),
+						Random::get(0.0f, 1.0f)));
+
+	transform_.rotation *= glm::angleAxis(glm::radians(ROTATE_SPEED * elapsed), rotate_axis);
+
+	if(sec_since_crash >= 2 * INIT_Z_SPEED / 9.8) {
+		// when hit the ground again
+		Sound::play_3D(*fall_to_ground_sample, 0.5f/*1.0f too loud*/, transform_.position, 4.0f);
+		// make the scene black and show game over
+	}
+}
+
+void PlayMode::Player::enter_crash_phase() {
+	assert(crashed == false);
+	crashed =true;
+
+	// play crash sound
+	Sound::play_3D(*crash_sample, 1.0f, transform_.position, 4.0f);
 }
 
 PlayMode::OncomingCars::OncomingCars(Scene *s, PlayMode::Player *p) {
@@ -390,7 +435,7 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 	next_car_interval_ -= elapsed;
 	if (next_car_interval_ <= 0) {
 		generate_new_car();
-		next_car_interval_ = Random::get(3.0f, 6.0f);
+		next_car_interval_ = Random::get(2.0f, 5.0f);
 	}
 	constexpr float ONCOMING_CAR_SPEED = 20.0;
 	for (auto &car : cars_) {
@@ -398,15 +443,15 @@ bool PlayMode::OncomingCars::update(float elapsed) {
 		// update engine sound
 		glm::vec3 sound_position = car.t.position;
 		sound_position.x = float(car.t.position.x - player_->position_) * sound_position_multiplier;
-		car.engineSample->set_position(sound_position);
-		car.hornSample->set_position(sound_position);
+		car.engine_sample->set_position(sound_position);
+		car.horn_sample->set_position(sound_position);
 
 		if (fabs(car.t.position.x - player_->position_) <= 0.2 &&
-			fabs(player_->transform_.position.y - car.t.position.y) <= 50.0f) {
+			fabs(player_->transform_.position.y - car.t.position.y) <= 100.0f) {
 			// if player is on the same lane of the oncoming car, and they are close, horn
-			car.hornSample->set_volume(1.0f);
+			car.horn_sample->set_volume(1.0f);
  		} else {
-			car.hornSample->set_volume(0.0f);
+			car.horn_sample->set_volume(0.0f);
 		}
 	}
 
@@ -438,7 +483,7 @@ void PlayMode::OncomingCars::generate_new_car() {
 	c.lane_ = Random::get(-1, 1);
 	c.t.position.x = (float) c.lane_*LANE_WIDTH;
 	c.t.position.y = 150.0f;
-	c.t.position.z = 0.1f;
+	c.t.position.z = 0.0f;
 
 	scene_->drawables.emplace_back(&c.t);
 	auto back_iterator = std::prev(scene_->drawables.end());
@@ -467,20 +512,34 @@ void PlayMode::OncomingCars::generate_new_car() {
 
 	glm::vec3 sound_position = c.t.position;
 	sound_position.x = float(c.t.position.x - player_->position_) * sound_position_multiplier;
-	c.engineSample = Sound::loop_3D(engine_sample, 1.0f, sound_position, 4.0f);
+	c.engine_sample = Sound::loop_3D(engine_sample, 1.0f, sound_position, 4.0f);
 	/* Set it to silence */
-	c.hornSample = Sound::loop_3D(horn_sample, 0.0f, sound_position, 4.0f);
+	c.horn_sample = Sound::loop_3D(horn_sample, 0.0f, sound_position, 4.0f);
 }
 
 void PlayMode::OncomingCars::detach_obsolete_car(Car &c) {
 	scene_->drawables.erase(c.it.value());
 	c.it = std::nullopt;
-	if(c.engineSample) {
-		c.engineSample->stop(2);
+	if(c.engine_sample) {
+		c.engine_sample->stop(2);
 	}
-	if(c.hornSample) {
-		c.hornSample->stop(2);
+	if(c.horn_sample) {
+		c.horn_sample->stop(2);
 	}
-	c.engineSample = nullptr;
-	c.hornSample = nullptr;
+	c.engine_sample = nullptr;
+	c.horn_sample = nullptr;
 }
+
+void PlayMode::OncomingCars::mute_all_cars() {
+	for(auto &c: cars_) {
+		if(c.engine_sample) {
+			c.engine_sample->stop();
+		}
+		if(c.horn_sample) {
+			c.horn_sample->stop();
+		}
+		c.engine_sample = nullptr;
+		c.horn_sample = nullptr;
+	}
+}
+
