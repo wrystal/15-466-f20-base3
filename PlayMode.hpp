@@ -23,7 +23,6 @@ const std::map<CarModel, std::string> CAR_MODEL_NAMES = {
         {CarModel::Police, "Police"},
         {CarModel::Ambulance, "Ambulance"},
         {CarModel::TruckFlat, "TruckFlat"},
-//        {CarModel::Sedan, "Sedan"},
         {CarModel::Sedan, "Van"},
         {CarModel::Van, "Van"},
 };
@@ -38,8 +37,6 @@ struct PlayMode : Mode {
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
 	static constexpr float LANE_WIDTH = 2.0;
-
-
 
 	struct RoadTiles {
 		RoadTiles(PlayMode *p, int num_tiles);
@@ -117,7 +114,7 @@ struct PlayMode : Mode {
 	float brightness = 1.0;
 	std::deque<std::pair<float, float>> brightness_animation = {
 //		{HIGH_BRIGHTNESS, 10},
-		{LOW_BRIGHTNESS, 5}
+		{LOW_BRIGHTNESS, 10}
 	};
 
 	void update_brightness(float elapsed);
@@ -133,21 +130,8 @@ struct PlayMode : Mode {
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
 
-	//hexapod leg to wobble:
-//	Scene::Transform *hip = nullptr;
-//	Scene::Transform *upper_leg = nullptr;
-//	Scene::Transform *lower_leg = nullptr;
-//	glm::quat hip_base_rotation;
-//	glm::quat upper_leg_base_rotation;
-//	glm::quat lower_leg_base_rotation;
-//	float wobble = 0.0f;
-
-//	glm::vec3 get_leg_tip_position();
-
-	//music coming from the tip of the leg (as a demonstration):
-//	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
-	
 	//camera:
 	Scene::Camera *camera = nullptr;
 
+	float total_score = 0.0f; // total_elased
 };

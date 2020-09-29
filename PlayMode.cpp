@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <sstream>
 #include "random.hpp"
 
 using Random = effolkronium::random_static;
@@ -26,7 +27,8 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	return new Scene(data_path("cars.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
 
-		if (mesh_name=="TruckFlat" || mesh_name=="Van" || mesh_name=="Police" || mesh_name == "RoadTile" || mesh_name=="Ambulance") {
+		if (mesh_name=="TruckFlat" || mesh_name=="Van" || mesh_name=="Police"
+		|| mesh_name == "RoadTile" || mesh_name=="Ambulance" || mesh_name=="PlayerCar") {
 			return;
 		}
 
@@ -55,6 +57,7 @@ Load< std::map<CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> st
 	map_p->emplace(CarModel::Police, Sound::Sample(data_path("PoliceHorn.opus")));
 	map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("AmbulanceHorn.opus")));
 	map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatHorn.opus")));
+	map_p->emplace(CarModel::Van, Sound::Sample(data_path("TruckFlatHorn.opus")));
 
 	return map_p;
 });
@@ -65,7 +68,8 @@ Load< std::map<CarModel, Sound::Sample>> engine_samples(LoadTagDefault, []() -> 
     map_p->emplace(CarModel::Sedan, Sound::Sample(data_path("car_engine_2.opus")));
     map_p->emplace(CarModel::Police, Sound::Sample(data_path("car_engine_2.opus")));
     map_p->emplace(CarModel::Ambulance, Sound::Sample(data_path("car_engine_2.opus")));
-    map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatEngine.opus")));
+	map_p->emplace(CarModel::TruckFlat, Sound::Sample(data_path("TruckFlatEngine.opus")));
+	map_p->emplace(CarModel::Van, Sound::Sample(data_path("TruckFlatEngine.opus")));
 
     return map_p;
 });
@@ -153,36 +157,19 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
-
-	//slowly rotates through [0,1):
-//	wobble += elapsed / 10.0f;
-//	wobble -= std::floor(wobble);
-
-//	hip->rotation = hip_base_rotation * glm::angleAxis(
-//		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-//		glm::vec3(0.0f, 1.0f, 0.0f)
-//	);
-//	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-//		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-//		glm::vec3(0.0f, 0.0f, 1.0f)
-//	);
-//	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-//		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-//		glm::vec3(0.0f, 0.0f, 1.0f)
-//	);
-
-
 	if(!player.crashed) {
+		total_score += elapsed;
 		road_tiles.update(elapsed);
 		oncoming_cars.update(elapsed);
-		update_brightness(elapsed);
 		bool is_collided = oncoming_cars.update(elapsed);
 		if(is_collided) {
 			player.enter_crash_phase();
 			oncoming_cars.mute_all_cars();
 			bgm_sample->stop();
 			brightness_animation.clear();
+			// make the scene gradually becomes dark
 			brightness = 1.0f;
+			brightness_animation.emplace_back(0.0f, 2.8f);
 		}
 
 		{
@@ -196,32 +183,7 @@ void PlayMode::update(float elapsed) {
 	}
 
 	player.update(elapsed);
-
-
-
-
-
-	//move camera:
-	{
-
-//		//combine inputs into a move:
-//		constexpr float PlayerSpeed = 30.0f;
-//		glm::vec2 move = glm::vec2(0.0f);
-//		if (left.pressed && !right.pressed) move.x =-1.0f;
-//		if (!left.pressed && right.pressed) move.x = 1.0f;
-//		if (down.pressed && !up.pressed) move.y =-1.0f;
-//		if (!down.pressed && up.pressed) move.y = 1.0f;
-//
-//		//make it so that moving diagonally doesn't go faster:
-//		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-//
-//		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-//		glm::vec3 right = frame[0];
-//		//glm::vec3 up = frame[1];
-//		glm::vec3 forward = -frame[2];
-//
-//		camera->transform->position += move.x * right + move.y * forward;
-	}
+	update_brightness(elapsed);
 
 	{ //update listener to camera position:
 		glm::mat4x3 frame = camera->transform->make_local_to_parent();
@@ -267,25 +229,48 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			0.0f, 0.0f, 0.0f, 1.0f
 		));
 
+		std::stringstream ss;
+
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		if(!player.crashed) {
+			ss << "Score: " << (int)total_score;
+			lines.draw_text(ss.str(),
+			                glm::vec3(-aspect + 0.1f * H + 0.05f, 1.0 - 1.2f * H, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+			lines.draw_text(ss.str(),
+			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, 1.0 - 1.2f * H + ofs, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+			lines.draw_text(R"(Click 'S' 'D' to change lane)",
+			                glm::vec3(-aspect + 0.1f * H + 0.05f, -0.95f + 0.1f * H, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+			lines.draw_text(R"(Click 'S' 'D' to change lane)",
+			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, -0.95f + 0.1f * H + ofs, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		} else {
+			ss << "Game Over! Score: " << (int)total_score;
+			constexpr float H = 0.09f;
+			lines.draw_text(ss.str(),
+			                glm::vec3(-aspect + 0.1f * H + 0.45f, 0.3 - 1.2f * H, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+			float ofs = 2.0f / drawable_size.y;
+			lines.draw_text(ss.str(),
+			                glm::vec3(-aspect + 0.1f * H + ofs + 0.45f, 0.3 - 1.2f * H + ofs, 0.0),
+			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		}
+
+
 	}
 	GL_ERRORS();
 }
 void PlayMode::update_brightness(float elapsed) {
 	if (!brightness_animation.empty()) {
-//		std::cout << "elapsed: " << elapsed << std::endl;
-//		for (auto p : brightness_animation) {
-//			std::cout << p.first << ' ' << p.second << '\n';
-//		}
 		const float &target_val = brightness_animation.front().first;
 		float &transition_time = brightness_animation.front().second;
 		transition_time -= elapsed;
@@ -312,10 +297,12 @@ void PlayMode::update_brightness(float elapsed) {
 		}
 		brightness = new_brightness;
 	} else {
-		brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3);
-		// every 10-15 s there is a thunder
-		brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(10.0, 15.0));
-		brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.2);
+		if(!player.crashed) {
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3);
+			// every 10-15 s there is a thunder
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(7.0, 12.0));
+			brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.2);
+		}
 	}
 }
 
@@ -364,7 +351,7 @@ PlayMode::Player::Player(Scene *s) : scene_{s} {
 		glm::vec3(0.0f, 0.0f, 1.0f)
 	);
 
-	mesh_ = &hexapod_meshes->lookup("TruckFlat");
+	mesh_ = &hexapod_meshes->lookup("PlayerCar");
 
 }
 
@@ -413,8 +400,7 @@ void PlayMode::Player::crash_animation(float elapsed) {
 
 	if(sec_since_crash >= 2 * INIT_Z_SPEED / 9.8) {
 		// when hit the ground again
-		Sound::play_3D(*fall_to_ground_sample, 0.5f/*1.0f too loud*/, transform_.position, 4.0f);
-		// make the scene black and show game over
+		Sound::play_3D(*fall_to_ground_sample, 0.8f/*1.0f too loud*/, transform_.position, 4.0f);
 	}
 }
 
@@ -496,7 +482,8 @@ void PlayMode::OncomingCars::generate_new_car() {
 			                      CarModel::Police,
 			                      CarModel::Ambulance,
 			                      CarModel::TruckFlat,
-			                      CarModel::Sedan
+			                      CarModel::Sedan,
+			                      CarModel::Van,
 	                      });
 
 	const Mesh *mesh_ = &hexapod_meshes->lookup(CAR_MODEL_NAMES.at(c.model));
