@@ -45,10 +45,6 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-//Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
-//	return new Sound::Sample(data_path("dusty-floor.opus"));
-//});
-
 Load< std::map<CarModel, Sound::Sample>> horn_samples(LoadTagDefault, []() -> std::map<CarModel, Sound::Sample> const * {
 	auto map_p = new std::map<CarModel, Sound::Sample>();
 
@@ -243,11 +239,11 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, 1.0 - 1.2f * H + ofs, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-			lines.draw_text(R"(Press 'S' 'D' to control the car)",
+			lines.draw_text(R"(Press 'A' 'D' to control the car)",
 			                glm::vec3(-aspect + 0.1f * H + 0.05f, -0.95f + 0.1f * H, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-			lines.draw_text(R"(Press 'S' 'D' to control the car)",
+			lines.draw_text(R"(Press 'A' 'D' to control the car)",
 			                glm::vec3(-aspect + 0.1f * H + ofs + 0.05f, -0.95f + 0.1f * H + ofs, 0.0),
 			                glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			                glm::u8vec4(0xff, 0xff, 0xff, 0x00));
@@ -297,17 +293,12 @@ void PlayMode::update_brightness(float elapsed) {
 	} else {
 		if(!player.crashed) {
 			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3);
-			// every 10-15 s there is a thunder
-			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(7.0, 12.0));
+			// every xx s there is a thunder
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get(5.0, 10.0));
 			brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.2);
 		}
 	}
 }
-
-//glm::vec3 PlayMode::get_leg_tip_position() {
-//	//the vertex position here was read from the model in blender:
-//	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
-//}
 
 PlayMode::RoadTiles::RoadTiles(PlayMode *p, int num_tiles) : p{p}, num_tiles{num_tiles} {
 	mesh = &hexapod_meshes->lookup("RoadTile");
