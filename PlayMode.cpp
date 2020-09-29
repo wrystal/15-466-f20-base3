@@ -278,7 +278,7 @@ void PlayMode::update_brightness(float elapsed) {
 				if(fabs(brightness_animation.front().first - HIGH_BRIGHTNESS) <= 1e-3 &&
 					fabs(target_val - LOW_BRIGHTNESS) <= 1e-3) {
 					// previous is dark, next is bright, then play thunder effect
-					int idx = Random::get<int>(0, thunder_sample_vec->size()-1);
+					int idx = Random::get<int>(0, static_cast<int>(thunder_sample_vec->size()-1));
 					Sound::play_3D(
 							(*thunder_sample_vec).at(idx), 1.0f, player.transform_.position, 4.0f);
 				}
@@ -386,7 +386,7 @@ void PlayMode::Player::crash_animation(float elapsed) {
 	}
 
 	sec_since_crash += elapsed;
-	float z = float(INIT_Z_SPEED * sec_since_crash) - 0.5 * 9.8 * sec_since_crash * sec_since_crash;
+	auto z = float(INIT_Z_SPEED * sec_since_crash - 0.5f * 9.8f * sec_since_crash * sec_since_crash);
 	transform_.position.z = z;
 
 	glm::vec3 rotate_axis = glm::normalize(

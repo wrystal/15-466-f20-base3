@@ -111,10 +111,10 @@ struct PlayMode : Mode {
 	static constexpr float LOW_BRIGHTNESS = 0.05f;
 	static constexpr float MED_BRIGHTNESS = 0.4f;
 	static constexpr float HIGH_BRIGHTNESS = 1.0f;
-	float brightness = 1.0;
+	float brightness = 1.0f;
 	std::deque<std::pair<float, float>> brightness_animation = {
 //		{HIGH_BRIGHTNESS, 10},
-		{LOW_BRIGHTNESS, 10}
+		{LOW_BRIGHTNESS, 10.0f}
 	};
 
 	void update_brightness(float elapsed);
