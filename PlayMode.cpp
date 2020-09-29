@@ -293,9 +293,10 @@ void PlayMode::update_brightness(float elapsed) {
 	} else {
 		if(!player.crashed) {
 			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3f);
+			brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.3f);
+			brightness_animation.emplace_back(LOW_BRIGHTNESS, 0.3f);
 			// every xx s there is a thunder
 			brightness_animation.emplace_back(LOW_BRIGHTNESS, Random::get<float>(5.0f, 10.0f));
-			brightness_animation.emplace_back(HIGH_BRIGHTNESS, 0.2f);
 		}
 	}
 }

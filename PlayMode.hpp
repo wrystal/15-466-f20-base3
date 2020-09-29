@@ -108,7 +108,7 @@ struct PlayMode : Mode {
 	//----- game state -----
 
 
-	static constexpr float LOW_BRIGHTNESS = 0.05f;
+	static constexpr float LOW_BRIGHTNESS = 0.1f;
 	static constexpr float MED_BRIGHTNESS = 0.4f;
 	static constexpr float HIGH_BRIGHTNESS = 1.0f;
 	float brightness = 1.0f;
